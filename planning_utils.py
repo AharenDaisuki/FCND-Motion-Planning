@@ -89,7 +89,7 @@ def valid_actions(grid, current_node):
 
 
 def a_star(grid, h, start, goal):
-
+    print('run A*')
     path = []
     path_cost = 0
     queue = PriorityQueue()
@@ -139,8 +139,90 @@ def a_star(grid, h, start, goal):
         print('**********************') 
     return path[::-1], path_cost
 
+def iterative_astar(grid, h, start, goal):
+    ''' iterative deepening A* '''
+    print('run IDA*')
+    max_threshold = 1000 # TODO modify max threshold
+    path_cost = 0.0
+    path = []
+    found = False
 
+    def dfs(current_cost, upperbound):
+        ''' current_cost: g score for current node, upperbound: pruning threshold '''
+        assert(len(path) >= 1)
+        current_node = path[len(path)-1]
+        
+        # f = g + h
+        f_score = current_cost + h(current_node, goal)
+        if f_score > upperbound:
+            # return updated upperbound
+            return False, f_score
+        
+        # if found
+        if goal == current_node:
+            # here f_score == current_cost anyway
+            return True, f_score
+        
+        optimal_solution = np.inf
+        for action in valid_actions(grid, current_node):
+            move = action.delta
+            next_node = (current_node[0]+move[0], current_node[1]+move[1])
+            # print(next_node)
+            if next_node not in path:
+                path.append(next_node)
+                flag, estimation = dfs(current_cost + action.cost, upperbound)
+                # if found
+                if flag:
+                    return flag, estimation
+                # update optimal solution if possible 
+                if estimation < optimal_solution:
+                    optimal_solution = estimation
+                path.pop()
+        # goal is not found, return the optimal estimation
+        return False, optimal_solution
+    
+    assert(len(path) == 0)
+    threshold = h(start, goal)
+    path.append(start)
+    while threshold < max_threshold:
+        # try to find a valid path with path cost
+        found, path_cost = dfs(0.0, threshold)
+        if found:
+            print('Found a path.')
+            break
+        # if no such path, udpate threshold
+        threshold = path_cost
+        # for debug
+        # print(threshold)
+
+    # check depth
+    if threshold > max_threshold:
+        print('Max threshold exceeds.')
+        assert(False)    
+    
+    # output
+    if found:
+        return path, path_cost
+    else:
+        print('**********************')
+        print('Failed to find a path!')
+        print('**********************')
+    
+    # no valid path is found    
+    return path, path_cost
 
 def heuristic(position, goal_position):
     return np.linalg.norm(np.array(position) - np.array(goal_position))
+
+def heuristic_dummy(position, goal_position):
+    return 0
+
+def heuristic_euclidian(position, goal_position):
+    return ((position[0]-goal_position[0]) ** 2 + (position[1]-goal_position[1]) ** 2) ** 0.5
+
+def heuristic_manhattan(position, goal_position):
+    return abs(position[0] - goal_position[0]) + abs(position[1] - goal_position[1])
+
+def heuristic_chebyshev(position, goal_position):
+    return max(abs(position[0] - goal_position[0]), abs(position[1] - goal_position[1]))
 
